@@ -41,7 +41,7 @@ type UpdateTilesetErrResponse struct {
 
 // UpsertTileset creates a tileset if it does not exist. If it exists,
 // it will be patched with the provided recipe.
-func (c *client) UpsertTileset(ctx context.Context, tileset string, recipe TilesetRecipe) error {
+func (c *Client) UpsertTileset(ctx context.Context, tileset string, recipe TilesetRecipe) error {
 	if len(tileset) == 0 {
 		return fmt.Errorf("%w failed: tileset is required", ErrValidation)
 	}
@@ -87,7 +87,7 @@ func (c *client) UpsertTileset(ctx context.Context, tileset string, recipe Tiles
 }
 
 // UpdateTilesetRecipe replaces an existing recipe for the provided tileset.
-func (c *client) UpdateTilesetRecipe(ctx context.Context, tileset string, recipe TilesetRecipe) error {
+func (c *Client) UpdateTilesetRecipe(ctx context.Context, tileset string, recipe TilesetRecipe) error {
 	if len(tileset) == 0 {
 		return fmt.Errorf("%w failed: tileset is required", ErrValidation)
 	}
@@ -130,7 +130,7 @@ type PublishTilesetJob struct {
 	JobID   string
 	Tileset string
 
-	client *client
+	client *Client
 }
 
 type PublishTilesetResponse struct {
@@ -144,7 +144,7 @@ type PublishTilesetResponse struct {
 
 // PublishTileset publishes the provided tileset and returns a job that can
 // be polled to check whether the job has finished or not.
-func (c *client) PublishTileset(ctx context.Context, tileset string) (PublishTilesetJob, error) {
+func (c *Client) PublishTileset(ctx context.Context, tileset string) (PublishTilesetJob, error) {
 	var job PublishTilesetJob
 	if len(tileset) == 0 {
 		return job, fmt.Errorf("%w failed: tileset is required", ErrValidation)

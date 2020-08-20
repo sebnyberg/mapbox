@@ -12,7 +12,7 @@ import (
 //
 // The provided JSON path should point to a file containing one GeoJSON
 // feature object per line.
-func (c *client) CreateTilesetSource(ctx context.Context, tilesetID string, jsonPath string) (NewTilesetSourceResponse, error) {
+func (c *Client) CreateTilesetSource(ctx context.Context, tilesetID string, jsonPath string) (NewTilesetSourceResponse, error) {
 	return c.PutTilesetSource(ctx, tilesetID, jsonPath)
 }
 
@@ -35,7 +35,7 @@ type NewTilesetSourceResponse struct {
 //
 // The provided path should point to a file containing one GeoJSON
 // feature object per line.
-func (c *client) PutTilesetSource(ctx context.Context, tilesetID string, jsonPath string) (NewTilesetSourceResponse, error) {
+func (c *Client) PutTilesetSource(ctx context.Context, tilesetID string, jsonPath string) (NewTilesetSourceResponse, error) {
 	url := baseURL +
 		"/tilesets/v1/sources/" + c.username + "/" + tilesetID +
 		"?access_token=" + c.accessToken
