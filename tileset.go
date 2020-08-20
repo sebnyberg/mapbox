@@ -154,7 +154,7 @@ func (c *Client) PublishTileset(ctx context.Context, tileset string) (PublishTil
 	}
 
 	url := baseURL + "/tilesets/v1/" + tileset + "/publish?access_token=" + c.accessToken
-	req, err := http.NewRequest(http.MethodPatch, url, nil)
+	req, err := http.NewRequest(http.MethodPost, url, nil)
 	if err != nil {
 		return job, fmt.Errorf("%w error, failed to create http request: %v", ErrUnexpected, err)
 	}
