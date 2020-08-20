@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -12,8 +13,8 @@ import (
 //
 // The provided JSON path should point to a file containing one GeoJSON
 // feature object per line.
-func (c *Client) CreateTilesetSource(ctx context.Context, tilesetID string, jsonPath string) (NewTilesetSourceResponse, error) {
-	return c.PutTilesetSource(ctx, tilesetID, jsonPath)
+func (c *Client) CreateTilesetSource(ctx context.Context, tilesetID string, jsonReader io.Reader) (NewTilesetSourceResponse, error) {
+	return c.PutTilesetSource(ctx, tilesetID, jsonReader)
 }
 
 type NewTilesetSourceResponse struct {
@@ -35,13 +36,13 @@ type NewTilesetSourceResponse struct {
 //
 // The provided path should point to a file containing one GeoJSON
 // feature object per line.
-func (c *Client) PutTilesetSource(ctx context.Context, tilesetID string, jsonPath string) (NewTilesetSourceResponse, error) {
+func (c *Client) PutTilesetSource(ctx context.Context, tilesetID string, jsonReader io.Reader) (NewTilesetSourceResponse, error) {
 	url := baseURL +
 		"/tilesets/v1/sources/" + c.username + "/" + tilesetID +
 		"?access_token=" + c.accessToken
 
 	var jsonResp NewTilesetSourceResponse
-	resp, err := putMultipart(ctx, c.httpClient, url, jsonPath)
+	resp, err := putMultipart(ctx, c.httpClient, url, "filenamedoesntmatter", jsonReader)
 	if err != nil {
 		return jsonResp, fmt.Errorf("upload %w failed, %v", ErrOperation, err)
 	}

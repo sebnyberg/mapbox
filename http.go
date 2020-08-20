@@ -1,38 +1,27 @@
 package mapbox
 
 import (
-	"bufio"
 	"context"
 	"io"
 	"mime/multipart"
 	"net/http"
-	"os"
 	"sync"
 
 	"golang.org/x/net/context/ctxhttp"
 )
 
 // putMultiPart uploads the file provided by path to a URL using PUT.
-func putMultipart(ctx context.Context, client *http.Client, url string, path string) (*http.Response, error) {
-	return doMultipart(ctx, client, http.MethodPut, url, path)
+func putMultipart(ctx context.Context, client *http.Client, url string, filename string, r io.Reader) (*http.Response, error) {
+	return doMultipart(ctx, client, http.MethodPut, url, filename, r)
 }
 
 // postMultiPart uploads the file provided by path to a URL using PUT.
-func postMultipart(ctx context.Context, client *http.Client, url string, path string) (*http.Response, error) {
-	return doMultipart(ctx, client, http.MethodPost, url, path)
+func postMultipart(ctx context.Context, client *http.Client, url string, filename string, r io.Reader) (*http.Response, error) {
+	return doMultipart(ctx, client, http.MethodPost, url, filename, r)
 }
 
 // doMultipart uploads the provided file
-func doMultipart(ctx context.Context, client *http.Client, method string, url string, path string) (*http.Response, error) {
-	f, err := os.OpenFile(path, os.O_RDONLY, 0644)
-	if err != nil {
-		return nil, err
-	}
-
-	// Reduce number of syscalls when reading from disk.
-	bufferedFileReader := bufio.NewReader(f)
-	defer f.Close()
-
+func doMultipart(ctx context.Context, client *http.Client, method string, url string, filename string, r io.Reader) (*http.Response, error) {
 	// Create a pipe which will allow the request to read
 	// while we are writing blocks from the file.
 	bodyReader, bodyWriter := io.Pipe()
@@ -49,9 +38,9 @@ func doMultipart(ctx context.Context, client *http.Client, method string, url st
 		}
 	}
 	go func() {
-		partWriter, err := formWriter.CreateFormFile("file", path)
+		partWriter, err := formWriter.CreateFormFile("file", filename)
 		setErr(err)
-		_, err = io.Copy(partWriter, bufferedFileReader)
+		_, err = io.Copy(partWriter, r)
 		setErr(err)
 		setErr(formWriter.Close())
 		setErr(bodyWriter.Close())
