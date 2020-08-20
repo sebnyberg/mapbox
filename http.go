@@ -1,0 +1,76 @@
+package mapbox
+
+import (
+	"bufio"
+	"context"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"os"
+	"sync"
+
+	"golang.org/x/net/context/ctxhttp"
+)
+
+// putMultiPart uploads the file provided by path to a URL using PUT.
+func putMultipart(ctx context.Context, client *http.Client, url string, path string) (*http.Response, error) {
+	return doMultipart(ctx, client, http.MethodPut, url, path)
+}
+
+// postMultiPart uploads the file provided by path to a URL using PUT.
+func postMultipart(ctx context.Context, client *http.Client, url string, path string) (*http.Response, error) {
+	return doMultipart(ctx, client, http.MethodPost, url, path)
+}
+
+// doMultipart uploads the provided file
+func doMultipart(ctx context.Context, client *http.Client, method string, url string, path string) (*http.Response, error) {
+	f, err := os.OpenFile(path, os.O_RDONLY, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	// Reduce number of syscalls when reading from disk.
+	bufferedFileReader := bufio.NewReader(f)
+	defer f.Close()
+
+	// Create a pipe which will allow the request to read
+	// while we are writing blocks from the file.
+	bodyReader, bodyWriter := io.Pipe()
+	formWriter := multipart.NewWriter(bodyWriter)
+
+	// Store the first write error in writeErr.
+	var (
+		writeErr error
+		errOnce  sync.Once
+	)
+	setErr := func(err error) {
+		if err != nil {
+			errOnce.Do(func() { writeErr = err })
+		}
+	}
+	go func() {
+		partWriter, err := formWriter.CreateFormFile("file", path)
+		setErr(err)
+		_, err = io.Copy(partWriter, bufferedFileReader)
+		setErr(err)
+		setErr(formWriter.Close())
+		setErr(bodyWriter.Close())
+	}()
+
+	req, err := http.NewRequest(http.MethodPut, url, bodyReader)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Content-Type", formWriter.FormDataContentType())
+
+	// This operation will block until both the formWriter
+	// and bodyWriter have been closed by the goroutine,
+	// or in the event of a HTTP error.
+	resp, err := ctxhttp.Do(ctx, client, req)
+
+	if writeErr != nil {
+		return nil, writeErr
+	}
+
+	return resp, nil
+}
