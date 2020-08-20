@@ -165,6 +165,10 @@ func (c *Client) PublishTileset(ctx context.Context, tileset string) (PublishTil
 		return job, fmt.Errorf("publish tileset %w failed, err: %v", ErrOperation, err)
 	}
 
+	if resp.StatusCode == http.StatusNotFound {
+		return job, fmt.Errorf("tileset %v %w", tileset, ErrNotFound)
+	}
+
 	var jsonResp PublishTilesetResponse
 	if err := json.NewDecoder(resp.Body).Decode(&jsonResp); err != nil {
 		return job, fmt.Errorf("%w of publish tileset response failed, err: %v", ErrParse, err)
@@ -178,6 +182,9 @@ func (c *Client) PublishTileset(ctx context.Context, tileset string) (PublishTil
 	// Check if Mapbox has renamed the field to be consistent.
 	if len(jsonResp.JobID) == 0 && len(jsonResp.JobIDSnakeCased) != 0 {
 		job.JobID = jsonResp.JobIDSnakeCased
+	}
+	if len(job.JobID) == 0 {
+		fmt.Println("failed to fetch job ID from response")
 	}
 
 	return job, nil

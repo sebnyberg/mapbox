@@ -17,6 +17,7 @@ type Client struct {
 var (
 	ErrValidation = errors.New("validation")
 	ErrOperation  = errors.New("upload")
+	ErrNotFound   = errors.New("not found")
 	ErrParse      = errors.New("parse")
 	ErrUnexpected = errors.New("unexpected")
 )
