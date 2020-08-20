@@ -8,7 +8,7 @@ import (
 
 const baseURL = "https://api.mapbox.com"
 
-type client struct {
+type Client struct {
 	username    string
 	accessToken string
 	httpClient  *http.Client
@@ -22,8 +22,8 @@ var (
 )
 
 // NewClient returns a new Mapbox client which interacts with the Mapbox API.
-func NewClient(accessToken string, username string) (client, error) {
-	var c client
+func NewClient(accessToken string, username string) (Client, error) {
+	var c Client
 	if len(username) == 0 {
 		return c, fmt.Errorf("%w: username is required", ErrValidation)
 	}
