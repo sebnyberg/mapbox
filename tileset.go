@@ -100,7 +100,7 @@ func (c *Client) UpdateTilesetRecipe(ctx context.Context, tileset string, recipe
 		return fmt.Errorf("%w failure to parse json, err: %v", ErrUnexpected, err)
 	}
 
-	url := baseURL + "/tilesets/v1/" + tileset + "/recipe?accessToken=" + c.accessToken
+	url := baseURL + "/tilesets/v1/" + tileset + "/recipe?access_token=" + c.accessToken
 	req, err := http.NewRequest(http.MethodPatch, url, &body)
 	if err != nil {
 		return fmt.Errorf("%w error, failed to create http request: %v", ErrUnexpected, err)
