@@ -133,6 +133,16 @@ type PublishTilesetJob struct {
 	client *Client
 }
 
+func (j *PublishTilesetJob) Validate() error {
+	if len(j.JobID) == 0 {
+		return errors.New("failed to parse job ID from publish tileset response")
+	}
+	if len(j.Tileset) == 0 {
+		return errors.New("tileset missing in job description")
+	}
+	return nil
+}
+
 type PublishTilesetResponse struct {
 	Message string `json:"message"`
 	JobID   string `json:"jobId"`
@@ -183,11 +193,8 @@ func (c *Client) PublishTileset(ctx context.Context, tileset string) (PublishTil
 	if len(jsonResp.JobID) == 0 && len(jsonResp.JobIDSnakeCased) != 0 {
 		job.JobID = jsonResp.JobIDSnakeCased
 	}
-	if len(job.JobID) == 0 {
-		fmt.Println("failed to fetch job ID from response")
-	}
 
-	return job, nil
+	return job, job.Validate()
 }
 
 type PublishJobStage string
