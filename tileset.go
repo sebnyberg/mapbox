@@ -34,56 +34,64 @@ type TilesetRecipeLayer struct {
 	MaxZoom int `json:"maxzoom"`
 }
 
-type UpdateTilesetErrResponse struct {
+type UpdateTilesetResponse struct {
 	Message string   `json:"message"`
 	Errors  []string `json:"errors"`
 }
 
 // UpsertTileset creates a tileset if it does not exist. If it exists,
 // it will be patched with the provided recipe.
-func (c *Client) UpsertTileset(ctx context.Context, tileset string, recipe TilesetRecipe) error {
+func (c *Client) UpsertTileset(ctx context.Context, tileset string, recipe TilesetRecipe) (*UpdateTilesetResponse, error) {
 	if len(tileset) == 0 {
-		return fmt.Errorf("%w failed: tileset is required", ErrValidation)
+		return nil, fmt.Errorf("%w failed: tileset is required", ErrValidation)
 	}
 	if !strings.HasPrefix(tileset, c.username) {
 		tileset = c.username + "." + tileset
 	}
 
+	updateTilesetReq := &UpsertTilesetRequest{
+		Name:   tileset,
+		Recipe: recipe,
+	}
+
 	var body bytes.Buffer
-	if err := json.NewEncoder(&body).Encode(recipe); err != nil {
-		return fmt.Errorf("%w failure to parse json, err: %v", ErrUnexpected, err)
+	if err := json.NewEncoder(&body).Encode(updateTilesetReq); err != nil {
+		return nil, fmt.Errorf("%w failure to parse json, err: %v", ErrUnexpected, err)
 	}
 
 	url := baseURL + "/tilesets/v1/" + tileset + "?access_token=" + c.accessToken
 
 	req, err := http.NewRequest(http.MethodPost, url, &body)
 	if err != nil {
-		return fmt.Errorf("%w error, failed to create http request: %v", ErrUnexpected, err)
+		return nil, fmt.Errorf("%w error, failed to create http request: %v", ErrUnexpected, err)
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := ctxhttp.Do(ctx, c.httpClient, req)
 	if err != nil {
-		return fmt.Errorf("tileset upload %w failed, err: %v", ErrOperation, err)
+		return nil, fmt.Errorf("tileset upload %w failed, err: %v", ErrOperation, err)
+	}
+
+	// Parse response
+	var jsonResp UpdateTilesetResponse
+	if err := json.NewDecoder(resp.Body).Decode(&jsonResp); err != nil {
+		return nil, fmt.Errorf("%w of tileset update response failed, err: %v", ErrParse, err)
 	}
 
 	if resp.StatusCode == http.StatusOK {
-		return nil
-	}
-
-	// Parse error
-	var jsonResp UpdateTilesetErrResponse
-	if err := json.NewDecoder(resp.Body).Decode(&jsonResp); err != nil {
-		return fmt.Errorf("%w of tileset update response failed, err: %v", ErrParse, err)
+		return &jsonResp, nil
 	}
 
 	// BadRequest is returned when there is a resource conflict, in which case
 	// the message contains the string "already exists".
 	if strings.Contains(jsonResp.Message, "already exists") {
-		return c.UpdateTilesetRecipe(ctx, tileset, recipe)
+		if err := c.UpdateTilesetRecipe(ctx, tileset, recipe); err != nil {
+			return nil, err
+		}
+		return &UpdateTilesetResponse{}, nil
 	}
 
-	return errors.New(jsonResp.Message + ", errors: " + strings.Join(jsonResp.Errors, ","))
+	return &jsonResp, errors.New(jsonResp.Message + ", errors: " + strings.Join(jsonResp.Errors, ","))
 }
 
 // UpdateTilesetRecipe replaces an existing recipe for the provided tileset.
@@ -116,7 +124,7 @@ func (c *Client) UpdateTilesetRecipe(ctx context.Context, tileset string, recipe
 		return nil
 	}
 
-	var jsonResp UpdateTilesetErrResponse
+	var jsonResp UpdateTilesetResponse
 	if err := json.NewDecoder(resp.Body).Decode(&jsonResp); err != nil {
 		return fmt.Errorf("%w of tileset update response failed, err: %v", ErrParse, err)
 	}
